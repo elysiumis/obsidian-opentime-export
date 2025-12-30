@@ -198,4 +198,4 @@ MIT
 ## Links
 
 - [Elysium App](https://elysium.is)
-- [OpenTime Format Specification](https://github.com/elysiumis/opentime)
+- [OpenTime Format Specification](https://elysium.is/opentime)
