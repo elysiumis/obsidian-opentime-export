@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-opentime-export",
+	"name": "OpenTime Export",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Export calendar-related content (tasks, events, habits) to Elysium's OpenTime (.ot) format",
+	"author": "Elysium",
+	"authorUrl": "https://elysium.is",
+	"isDesktopOnly": false
+}
