@@ -3,7 +3,7 @@
 	"name": "OpenTime Export for Elysium",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Export calendar-related content (tasks, events, habits) to Elysium's OpenTime (.ot) format",
+	"description": "Export calendar-related content (tasks, events, habits) to Elysium's OpenTime (.ot) format.",
 	"author": "Elysium",
 	"authorUrl": "https://elysium.is",
 	"isDesktopOnly": true
