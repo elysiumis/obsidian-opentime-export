@@ -1,4 +1,4 @@
-# OpenTime Export for Obsidian
+# OpenTime Export for Elysium
 
 Export calendar-related content from Obsidian to [Elysium's](https://elysium.is) OpenTime (.ot) format.
 
