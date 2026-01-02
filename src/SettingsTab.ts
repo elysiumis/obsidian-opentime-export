@@ -2,13 +2,18 @@
  * Settings Tab for OpenTime Export Plugin
  */
 
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, TextComponent } from 'obsidian';
 import OpenTimeExportPlugin from '../main';
+import {
+    readElysiumPreferences,
+    isElysiumInstalled,
+    getExportModeDescription,
+    ElysiumPreferences
+} from './ElysiumPreferences';
 
 export interface OpenTimeExportSettings {
-    // Export location
-    exportPath: string;
-    exportFilename: string;
+    // Elysium folder path (required)
+    elysiumFolderPath: string;
 
     // Parsers to enable
     enableTasksParser: boolean;
@@ -16,30 +21,21 @@ export interface OpenTimeExportSettings {
     enableFrontmatterParser: boolean;
 
     // Scope
-    includeFolders: string;  // Comma-separated
-    excludeFolders: string;  // Comma-separated
+    includeFolders: string; // Comma-separated
+    excludeFolders: string; // Comma-separated
 
     // Behavior
     defaultTimezone: string;
     defaultEventDuration: number;
     autoExport: boolean;
+    insertMarkdownByDefault: boolean;
 
     // ID generation
     idPrefix: string;
-
-    // Elysium Direct Export
-    elysiumFolderEnabled: boolean;
-    elysiumFolderPath: string;
-
-    // Obsidian Linking Defaults
-    defaultVaultName: string;
-    defaultObsidianBehavior: 'replace' | 'alongside';
-    insertMarkdownByDefault: boolean;
 }
 
 export const DEFAULT_SETTINGS: OpenTimeExportSettings = {
-    exportPath: '',
-    exportFilename: 'obsidian-calendar.ot',
+    elysiumFolderPath: '',
     enableTasksParser: true,
     enableDayPlannerParser: true,
     enableFrontmatterParser: true,
@@ -48,60 +44,88 @@ export const DEFAULT_SETTINGS: OpenTimeExportSettings = {
     defaultTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     defaultEventDuration: 30,
     autoExport: false,
-    idPrefix: 'obs',
-    // Elysium integration defaults
-    elysiumFolderEnabled: false,
-    elysiumFolderPath: '',
-    defaultVaultName: '',
-    defaultObsidianBehavior: 'replace',
-    insertMarkdownByDefault: false
+    insertMarkdownByDefault: false,
+    idPrefix: 'obs'
 };
 
 export class OpenTimeExportSettingTab extends PluginSettingTab {
     plugin: OpenTimeExportPlugin;
+    private folderPathInput: TextComponent | null = null;
+    private elysiumPrefs: ElysiumPreferences | null = null;
+    private elysiumInstalled: boolean = false;
 
     constructor(app: App, plugin: OpenTimeExportPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
 
-    display(): void {
+    async display(): Promise<void> {
         const { containerEl } = this;
         containerEl.empty();
 
+        // Load Elysium preferences
+        this.elysiumInstalled = await isElysiumInstalled();
+        this.elysiumPrefs = await readElysiumPreferences();
+
         containerEl.createEl('h2', { text: 'OpenTime Export Settings' });
 
-        // Export Location Section
-        containerEl.createEl('h3', { text: 'Export Location' });
+        // Elysium Integration Section (Top priority)
+        containerEl.createEl('h3', { text: 'Elysium Integration' });
 
-        new Setting(containerEl)
-            .setName('Export path')
-            .setDesc('Folder path within vault to save .ot files (leave empty for vault root)')
-            .addText(text => text
-                .setPlaceholder('exports')
-                .setValue(this.plugin.settings.exportPath)
-                .onChange(async (value) => {
-                    this.plugin.settings.exportPath = value;
-                    await this.plugin.saveSettings();
-                }));
+        // Status indicator
+        this.renderElysiumStatus(containerEl);
 
-        new Setting(containerEl)
-            .setName('Export filename')
-            .setDesc('Name of the exported .ot file')
-            .addText(text => text
-                .setPlaceholder('obsidian-calendar.ot')
-                .setValue(this.plugin.settings.exportFilename)
-                .onChange(async (value) => {
-                    this.plugin.settings.exportFilename = value || 'obsidian-calendar.ot';
-                    await this.plugin.saveSettings();
-                }));
+        // Folder picker
+        const folderSetting = new Setting(containerEl)
+            .setName('Elysium OpenTime folder')
+            .setDesc('Folder where Elysium watches for .ot files');
 
-        // Parsers Section
+        folderSetting.addText(text => {
+            text
+                .setPlaceholder('Click Browse to select folder')
+                .setValue(this.plugin.settings.elysiumFolderPath);
+            text.inputEl.style.width = '300px';
+            this.folderPathInput = text;
+
+            // Allow manual editing as fallback
+            text.onChange(async (value) => {
+                this.plugin.settings.elysiumFolderPath = value;
+                await this.plugin.saveSettings();
+            });
+        });
+
+        folderSetting.addButton(button => {
+            button
+                .setButtonText('Browse...')
+                .onClick(async () => {
+                    const folder = await this.selectFolder();
+                    if (folder) {
+                        this.plugin.settings.elysiumFolderPath = folder;
+                        this.folderPathInput?.setValue(folder);
+                        await this.plugin.saveSettings();
+                    }
+                });
+        });
+
+        // Show synced export mode (read-only)
+        if (this.elysiumPrefs) {
+            new Setting(containerEl)
+                .setName('Export mode')
+                .setDesc('Synced from Elysium preferences')
+                .addText(text => {
+                    text
+                        .setValue(getExportModeDescription(this.elysiumPrefs!))
+                        .setDisabled(true);
+                    text.inputEl.style.width = '300px';
+                });
+        }
+
+        // Data Sources Section
         containerEl.createEl('h3', { text: 'Data Sources' });
 
         new Setting(containerEl)
             .setName('Parse Tasks plugin format')
-            .setDesc('Extract tasks with emoji dates (📅, ⏳, 🛫, ✅)')
+            .setDesc('Extract tasks with emoji dates (📅 due, ⏳ scheduled, 🛫 start, ✅ done)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableTasksParser)
                 .onChange(async (value) => {
@@ -111,7 +135,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Parse Day Planner format')
-            .setDesc('Extract time blocks (09:00 - 10:00 Meeting)')
+            .setDesc('Extract time blocks (e.g., "09:00 - 10:00 Meeting")')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableDayPlannerParser)
                 .onChange(async (value) => {
@@ -190,12 +214,22 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        new Setting(containerEl)
+            .setName('Insert markdown when creating items')
+            .setDesc('Also insert markdown into the current note when creating items')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.insertMarkdownByDefault)
+                .onChange(async (value) => {
+                    this.plugin.settings.insertMarkdownByDefault = value;
+                    await this.plugin.saveSettings();
+                }));
+
         // Advanced Section
         containerEl.createEl('h3', { text: 'Advanced' });
 
         new Setting(containerEl)
             .setName('ID prefix')
-            .setDesc('Prefix for generated item IDs')
+            .setDesc('Prefix for generated item IDs (e.g., "obs" creates "obs_task_...")')
             .addText(text => text
                 .setPlaceholder('obs')
                 .setValue(this.plugin.settings.idPrefix)
@@ -203,66 +237,81 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                     this.plugin.settings.idPrefix = value || 'obs';
                     await this.plugin.saveSettings();
                 }));
+    }
 
-        // Elysium Integration Section
-        containerEl.createEl('h3', { text: 'Elysium Integration' });
-        containerEl.createEl('p', {
-            text: 'Configure direct export to Elysium and Obsidian linking.',
-            cls: 'setting-item-description'
-        });
+    /**
+     * Render Elysium detection status
+     */
+    private renderElysiumStatus(container: HTMLElement): void {
+        const statusEl = container.createDiv({ cls: 'setting-item' });
+        const infoEl = statusEl.createDiv({ cls: 'setting-item-info' });
+        const descEl = infoEl.createDiv({ cls: 'setting-item-description' });
 
-        new Setting(containerEl)
-            .setName('Export directly to Elysium folder')
-            .setDesc('Write .ot files to Elysium\'s watched OpenTime folder')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.elysiumFolderEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.elysiumFolderEnabled = value;
-                    await this.plugin.saveSettings();
-                }));
+        if (this.elysiumInstalled) {
+            descEl.createSpan({
+                text: '✓ Elysium detected - export mode synced from app preferences',
+                cls: 'opentime-status-ok'
+            });
+        } else {
+            descEl.createSpan({
+                text: '⚠ Elysium not detected - using default settings (Single File mode)',
+                cls: 'opentime-status-warning'
+            });
+        }
+    }
 
-        new Setting(containerEl)
-            .setName('Elysium OpenTime folder')
-            .setDesc('Full path to the folder where Elysium watches for .ot files')
-            .addText(text => text
-                .setPlaceholder('/Users/you/Documents/OpenTime')
-                .setValue(this.plugin.settings.elysiumFolderPath)
-                .onChange(async (value) => {
-                    this.plugin.settings.elysiumFolderPath = value;
-                    await this.plugin.saveSettings();
-                }));
+    /**
+     * Open native folder picker dialog
+     */
+    private async selectFolder(): Promise<string | null> {
+        try {
+            // Access Electron's dialog through various possible paths
+            let dialog: any = null;
 
-        new Setting(containerEl)
-            .setName('Vault name')
-            .setDesc('How this vault appears in Elysium (for "Open in Obsidian" links)')
-            .addText(text => text
-                .setPlaceholder('Personal')
-                .setValue(this.plugin.settings.defaultVaultName)
-                .onChange(async (value) => {
-                    this.plugin.settings.defaultVaultName = value;
-                    await this.plugin.saveSettings();
-                }));
+            // Try different ways to access Electron dialog
+            try {
+                // Method 1: @electron/remote (modern Electron)
+                const remote = require('@electron/remote');
+                dialog = remote.dialog;
+            } catch {
+                try {
+                    // Method 2: electron.remote (older Electron)
+                    const electron = require('electron');
+                    dialog = electron.remote?.dialog;
+                } catch {
+                    // Method 3: Direct electron access
+                    try {
+                        const electron = require('electron');
+                        dialog = electron.dialog;
+                    } catch {
+                        // No dialog available
+                    }
+                }
+            }
 
-        new Setting(containerEl)
-            .setName('Default behavior')
-            .setDesc('How Elysium handles notes when opening from an item')
-            .addDropdown(dropdown => dropdown
-                .addOption('replace', 'Replace notes - Open Obsidian instead of Elysium notes')
-                .addOption('alongside', 'Show alongside - Show both Elysium and Obsidian notes')
-                .setValue(this.plugin.settings.defaultObsidianBehavior)
-                .onChange(async (value: 'replace' | 'alongside') => {
-                    this.plugin.settings.defaultObsidianBehavior = value;
-                    await this.plugin.saveSettings();
-                }));
+            if (!dialog) {
+                // Fallback: enable manual text entry
+                new Notice('Folder picker not available. Please enter the path manually.');
+                return null;
+            }
 
-        new Setting(containerEl)
-            .setName('Insert markdown by default')
-            .setDesc('When creating items, also insert markdown into the current note')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.insertMarkdownByDefault)
-                .onChange(async (value) => {
-                    this.plugin.settings.insertMarkdownByDefault = value;
-                    await this.plugin.saveSettings();
-                }));
+            const os = require('os');
+            const defaultPath = this.plugin.settings.elysiumFolderPath ||
+                `${os.homedir()}/Documents`;
+
+            const result = await dialog.showOpenDialog({
+                title: 'Select Elysium OpenTime Folder',
+                properties: ['openDirectory', 'createDirectory'],
+                defaultPath: defaultPath
+            });
+
+            if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+                return result.filePaths[0];
+            }
+        } catch (error) {
+            console.error('[OpenTime] Failed to open folder picker:', error);
+            new Notice('Failed to open folder picker. Please enter the path manually.');
+        }
+        return null;
     }
 }

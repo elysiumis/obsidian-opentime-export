@@ -11,6 +11,31 @@ export type HabitFrequency = 'daily' | 'weekly' | 'custom';
 
 export type DayOfWeek = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
+export type RepeatsPer = 'Day' | 'Week' | 'Month' | 'Year';
+export type RepeatsEndType = 'Never' | 'After' | 'On Date';
+export type StepStatus = 'pending' | 'completed';
+
+// Step (checklist item) for goals, tasks, projects
+export interface Step {
+    id: string;
+    title: string;
+    completed: boolean;
+    due_date?: string;  // YYYY-MM-DD
+    order: number;
+    status: StepStatus;
+}
+
+// Recurrence/Repeats settings
+export interface RepeatsSettings {
+    enabled: boolean;
+    count?: number;           // How many times per period
+    per?: RepeatsPer;         // Day, Week, Month, Year
+    weekdays?: string[];      // Array of weekday names for weekly
+    end_type?: RepeatsEndType;
+    end_count?: number;       // For "After X occurrences"
+    end_date?: string;        // For "On Date"
+}
+
 export interface OpenTimeLink {
     kind: 'url' | 'ref';
     value: string;
@@ -33,15 +58,16 @@ export interface HabitStreak {
 
 export interface ObsidianExtension {
     source_file: string;
+    folder_path?: string;
     line_number?: number;
     original_text?: string;
-    vault_name?: string;
 }
 
 export interface ElysiumExtension {
     obsidian_enabled: boolean;
     obsidian_vault_name?: string;
     obsidian_folder_path?: string;
+    obsidian_source_file?: string;
     obsidian_behavior?: 'replace' | 'alongside';
 }
 
@@ -51,7 +77,9 @@ interface BaseItem {
     id: string;
     title: string;
     tags?: string[];
+    categories?: string[];   // Elysium categories (labels)
     notes?: string;
+    steps?: Step[];          // Checklist items
     links?: OpenTimeLink[];
     x_obsidian?: ObsidianExtension;
     x_elysium?: ElysiumExtension;
@@ -64,6 +92,8 @@ export interface GoalItem extends BaseItem {
     target_date?: string;  // YYYY-MM-DD
     progress?: number;     // 0.0 - 1.0
     project_id?: string;
+    estimate_minutes?: number;
+    repeats?: RepeatsSettings;
 }
 
 export interface TaskItem extends BaseItem {
@@ -73,9 +103,10 @@ export interface TaskItem extends BaseItem {
     scheduled_start?: string; // ISO8601 datetime
     estimate_minutes?: number;
     actual_minutes?: number;
-    priority?: number;
+    priority?: number;        // 0-10 in Elysium
     goal_id?: string;
     project_id?: string;
+    repeats?: RepeatsSettings;
 }
 
 export interface HabitItem extends BaseItem {
@@ -85,6 +116,8 @@ export interface HabitItem extends BaseItem {
     streak?: HabitStreak;
     goal_id?: string;
     project_id?: string;
+    estimate_minutes?: number;
+    repeats?: RepeatsSettings;
 }
 
 export interface ReminderItem extends BaseItem {
@@ -123,6 +156,7 @@ export interface ProjectItem extends BaseItem {
     children?: string[];   // Item IDs
     progress?: number;     // 0.0 - 1.0
     target_date?: string;  // YYYY-MM-DD
+    estimate_minutes?: number;
 }
 
 export type OpenTimeItem =

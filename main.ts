@@ -9,21 +9,22 @@ import {
     App,
     Plugin,
     TFile,
-    TFolder,
     Notice,
-    normalizePath,
-    MarkdownView
+    MarkdownView,
+    Menu
 } from 'obsidian';
 
-import { OpenTimeDocument, OpenTimeItem, OpenTimeItemType } from './src/types/opentime';
+import { OpenTimeItem, OpenTimeItemType } from './src/types/opentime';
 import { CreateItemModal } from './src/modals/CreateItemModal';
+import { LinkItemModal } from './src/modals/LinkItemModal';
 import { TasksParser, DayPlannerParser, FrontmatterParser } from './src/parsers';
-import { OpenTimeExporter } from './src/OpenTimeExporter';
+import { ElysiumExporter } from './src/ElysiumExporter';
 import {
     OpenTimeExportSettings,
     OpenTimeExportSettingTab,
     DEFAULT_SETTINGS
 } from './src/SettingsTab';
+import { isElysiumInstalled } from './src/ElysiumPreferences';
 
 export default class OpenTimeExportPlugin extends Plugin {
     settings: OpenTimeExportSettings;
@@ -31,7 +32,7 @@ export default class OpenTimeExportPlugin extends Plugin {
     private tasksParser: TasksParser;
     private dayPlannerParser: DayPlannerParser;
     private frontmatterParser: FrontmatterParser;
-    private exporter: OpenTimeExporter;
+    private elysiumExporter: ElysiumExporter;
 
     async onload() {
         await this.loadSettings();
@@ -39,18 +40,24 @@ export default class OpenTimeExportPlugin extends Plugin {
         // Initialize parsers
         this.initializeParsers();
 
-        // Initialize exporter
-        this.exporter = new OpenTimeExporter(this.manifest.version);
+        // Initialize Elysium exporter
+        this.elysiumExporter = new ElysiumExporter(this.manifest.version);
+
+        // Check if Elysium is installed
+        const elysiumInstalled = await isElysiumInstalled();
+        if (!elysiumInstalled) {
+            console.log('[OpenTime] Elysium not detected - using default settings');
+        }
 
         // Add ribbon icon
-        this.addRibbonIcon('calendar-clock', 'Export to OpenTime', async () => {
+        this.addRibbonIcon('calendar-clock', 'Export to Elysium', async () => {
             await this.exportAll();
         });
 
         // Add commands
         this.addCommand({
             id: 'export-all',
-            name: 'Export all to OpenTime',
+            name: 'Export all to Elysium',
             callback: async () => {
                 await this.exportAll();
             }
@@ -58,7 +65,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'export-current-file',
-            name: 'Export current file to OpenTime',
+            name: 'Export current file to Elysium',
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
                 if (file) {
@@ -136,6 +143,61 @@ export default class OpenTimeExportPlugin extends Plugin {
             }
         });
 
+        // Link to existing Elysium item command
+        this.addCommand({
+            id: 'link-to-elysium',
+            name: 'Link note to Elysium item',
+            checkCallback: (checking: boolean) => {
+                const file = this.app.workspace.getActiveFile();
+                if (file) {
+                    if (!checking) {
+                        this.openLinkModal();
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Add title bar button (view action) for linking
+        this.registerEvent(
+            this.app.workspace.on('file-menu', (menu: Menu, file: TFile) => {
+                if (file.extension === 'md') {
+                    menu.addItem((item) => {
+                        item
+                            .setTitle('Link to Elysium item')
+                            .setIcon('link')
+                            .onClick(() => {
+                                this.openLinkModal();
+                            });
+                    });
+                }
+            })
+        );
+
+        // Add editor context menu (right-click)
+        this.registerEvent(
+            this.app.workspace.on('editor-menu', (menu: Menu) => {
+                menu.addItem((item) => {
+                    item
+                        .setTitle('Link to Elysium item')
+                        .setIcon('link')
+                        .onClick(() => {
+                            this.openLinkModal();
+                        });
+                });
+
+                menu.addItem((item) => {
+                    item
+                        .setTitle('Create Elysium item')
+                        .setIcon('plus-circle')
+                        .onClick(() => {
+                            this.openCreateModal(null);
+                        });
+                });
+            })
+        );
+
         // Add settings tab
         this.addSettingTab(new OpenTimeExportSettingTab(this.app, this));
 
@@ -148,20 +210,32 @@ export default class OpenTimeExportPlugin extends Plugin {
             })
         );
 
-        console.log('OpenTime Export plugin loaded');
+        console.log('[OpenTime] Export plugin loaded');
     }
 
     onunload() {
-        console.log('OpenTime Export plugin unloaded');
+        console.log('[OpenTime] Export plugin unloaded');
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const data = await this.loadData();
+
+        // Migrate old settings structure if needed
+        if (data) {
+            // Remove deprecated fields that may exist from older versions
+            delete data.exportPath;
+            delete data.exportFilename;
+            delete data.elysiumFolderEnabled;
+            delete data.defaultVaultName;
+            delete data.defaultObsidianBehavior;
+        }
+
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
-        this.initializeParsers();  // Reinitialize with new settings
+        this.initializeParsers(); // Reinitialize with new settings
     }
 
     /**
@@ -181,9 +255,15 @@ export default class OpenTimeExportPlugin extends Plugin {
     }
 
     /**
-     * Export all matching files to OpenTime format
+     * Export all matching files to Elysium
      */
     async exportAll() {
+        // Check if folder is configured
+        if (!this.settings.elysiumFolderPath) {
+            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            return;
+        }
+
         const startTime = Date.now();
         const items: OpenTimeItem[] = [];
 
@@ -204,24 +284,29 @@ export default class OpenTimeExportPlugin extends Plugin {
             return;
         }
 
-        // Create document
-        const document: OpenTimeDocument = {
-            opentime_version: '0.2',
-            default_timezone: this.settings.defaultTimezone,
-            items
-        };
+        // Export to Elysium folder
+        const success = await this.elysiumExporter.exportItems(
+            items,
+            this.settings.elysiumFolderPath,
+            this.settings.defaultTimezone
+        );
 
-        // Export to file
-        await this.writeExport(document);
-
-        const elapsed = Date.now() - startTime;
-        new Notice(`Exported ${items.length} items to OpenTime (${elapsed}ms)`);
+        if (success) {
+            const elapsed = Date.now() - startTime;
+            console.log(`[OpenTime] Exported ${items.length} items in ${elapsed}ms`);
+        }
     }
 
     /**
      * Export a single file
      */
     async exportFile(file: TFile) {
+        // Check if folder is configured
+        if (!this.settings.elysiumFolderPath) {
+            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            return;
+        }
+
         const items = await this.parseFile(file);
 
         if (items.length === 0) {
@@ -229,14 +314,12 @@ export default class OpenTimeExportPlugin extends Plugin {
             return;
         }
 
-        const document: OpenTimeDocument = {
-            opentime_version: '0.2',
-            default_timezone: this.settings.defaultTimezone,
-            items
-        };
-
-        await this.writeExport(document);
-        new Notice(`Exported ${items.length} items from ${file.basename}`);
+        // Export to Elysium folder
+        await this.elysiumExporter.exportItems(
+            items,
+            this.settings.elysiumFolderPath,
+            this.settings.defaultTimezone
+        );
     }
 
     /**
@@ -311,33 +394,6 @@ export default class OpenTimeExportPlugin extends Plugin {
     }
 
     /**
-     * Write the export to a file
-     */
-    private async writeExport(document: OpenTimeDocument) {
-        const yaml = this.exporter.export(document);
-
-        // Determine output path
-        let outputPath = this.settings.exportFilename;
-        if (this.settings.exportPath) {
-            outputPath = normalizePath(`${this.settings.exportPath}/${this.settings.exportFilename}`);
-
-            // Ensure folder exists
-            const folder = this.app.vault.getAbstractFileByPath(this.settings.exportPath);
-            if (!folder) {
-                await this.app.vault.createFolder(this.settings.exportPath);
-            }
-        }
-
-        // Write or update file
-        const existing = this.app.vault.getAbstractFileByPath(outputPath);
-        if (existing instanceof TFile) {
-            await this.app.vault.modify(existing, yaml);
-        } else {
-            await this.app.vault.create(outputPath, yaml);
-        }
-    }
-
-    /**
      * Open the create item modal
      */
     private openCreateModal(itemType: OpenTimeItemType | null) {
@@ -354,6 +410,19 @@ export default class OpenTimeExportPlugin extends Plugin {
             this.manifest.version,
             itemType,
             initialText
+        );
+        modal.open();
+    }
+
+    /**
+     * Open the link item modal to link current note to an Elysium item
+     */
+    private openLinkModal() {
+        const currentFile = this.app.workspace.getActiveFile();
+        const modal = new LinkItemModal(
+            this.app,
+            this.settings,
+            currentFile
         );
         modal.open();
     }

@@ -4,7 +4,7 @@
  * Serializes OpenTimeDocument to YAML format for .ot files
  */
 
-import { OpenTimeDocument, OpenTimeItem } from './types/opentime';
+import { OpenTimeDocument, OpenTimeItem, RepeatsSettings } from './types/opentime';
 
 export class OpenTimeExporter {
     private pluginVersion: string;
@@ -47,7 +47,7 @@ export class OpenTimeExporter {
      */
     private serializeItem(item: OpenTimeItem): string[] {
         const lines: string[] = [];
-        const indent = '  ';
+        const indent = '    ';  // 4 spaces for list item fields
 
         // Start item
         lines.push(`  - type: ${item.type}`);
@@ -60,7 +60,11 @@ export class OpenTimeExporter {
                 lines.push(`${indent}kind: goal`);
                 if (item.target_date) lines.push(`${indent}target_date: ${this.quote(item.target_date)}`);
                 if (item.progress !== undefined) lines.push(`${indent}progress: ${item.progress}`);
+                if (item.estimate_minutes) lines.push(`${indent}estimate_minutes: ${item.estimate_minutes}`);
                 if (item.project_id) lines.push(`${indent}project_id: ${this.quote(item.project_id)}`);
+                if (item.repeats) {
+                    lines.push(...this.serializeRepeats(item.repeats, indent));
+                }
                 break;
 
             case 'task':
@@ -72,6 +76,9 @@ export class OpenTimeExporter {
                 if (item.priority !== undefined) lines.push(`${indent}priority: ${item.priority}`);
                 if (item.goal_id) lines.push(`${indent}goal_id: ${this.quote(item.goal_id)}`);
                 if (item.project_id) lines.push(`${indent}project_id: ${this.quote(item.project_id)}`);
+                if (item.repeats) {
+                    lines.push(...this.serializeRepeats(item.repeats, indent));
+                }
                 break;
 
             case 'habit':
@@ -92,8 +99,12 @@ export class OpenTimeExporter {
                     if (item.streak.current !== undefined) lines.push(`${indent}  current: ${item.streak.current}`);
                     if (item.streak.longest !== undefined) lines.push(`${indent}  longest: ${item.streak.longest}`);
                 }
+                if (item.estimate_minutes) lines.push(`${indent}estimate_minutes: ${item.estimate_minutes}`);
                 if (item.goal_id) lines.push(`${indent}goal_id: ${this.quote(item.goal_id)}`);
                 if (item.project_id) lines.push(`${indent}project_id: ${this.quote(item.project_id)}`);
+                if (item.repeats) {
+                    lines.push(...this.serializeRepeats(item.repeats, indent));
+                }
                 break;
 
             case 'reminder':
@@ -133,12 +144,16 @@ export class OpenTimeExporter {
                 }
                 if (item.progress !== undefined) lines.push(`${indent}progress: ${item.progress}`);
                 if (item.target_date) lines.push(`${indent}target_date: ${this.quote(item.target_date)}`);
+                if (item.estimate_minutes) lines.push(`${indent}estimate_minutes: ${item.estimate_minutes}`);
                 break;
         }
 
         // Common fields
         if (item.tags && item.tags.length > 0) {
             lines.push(`${indent}tags: [${item.tags.map(t => this.quote(t)).join(', ')}]`);
+        }
+        if (item.categories && item.categories.length > 0) {
+            lines.push(`${indent}categories: [${item.categories.map(c => this.quote(c)).join(', ')}]`);
         }
         if (item.notes) {
             if (item.notes.includes('\n')) {
@@ -148,6 +163,19 @@ export class OpenTimeExporter {
                 }
             } else {
                 lines.push(`${indent}notes: ${this.quote(item.notes)}`);
+            }
+        }
+        if (item.steps && item.steps.length > 0) {
+            lines.push(`${indent}steps:`);
+            for (const step of item.steps) {
+                lines.push(`${indent}  - id: ${this.quote(step.id)}`);
+                lines.push(`${indent}    title: ${this.quote(step.title)}`);
+                lines.push(`${indent}    completed: ${step.completed}`);
+                lines.push(`${indent}    order: ${step.order}`);
+                lines.push(`${indent}    status: ${step.status}`);
+                if (step.due_date) {
+                    lines.push(`${indent}    due_date: ${this.quote(step.due_date)}`);
+                }
             }
         }
         if (item.links && item.links.length > 0) {
@@ -162,33 +190,46 @@ export class OpenTimeExporter {
         if (item.x_obsidian) {
             lines.push(`${indent}x_obsidian:`);
             lines.push(`${indent}  source_file: ${this.quote(item.x_obsidian.source_file)}`);
+            if (item.x_obsidian.folder_path) {
+                lines.push(`${indent}  folder_path: ${this.quote(item.x_obsidian.folder_path)}`);
+            }
             if (item.x_obsidian.line_number !== undefined) {
                 lines.push(`${indent}  line_number: ${item.x_obsidian.line_number}`);
             }
             if (item.x_obsidian.original_text) {
                 lines.push(`${indent}  original_text: ${this.quote(item.x_obsidian.original_text)}`);
             }
-            if (item.x_obsidian.vault_name) {
-                lines.push(`${indent}  vault_name: ${this.quote(item.x_obsidian.vault_name)}`);
-            }
-        }
-
-        // Elysium extension
-        if (item.x_elysium) {
-            lines.push(`${indent}x_elysium:`);
-            lines.push(`${indent}  obsidian_enabled: ${item.x_elysium.obsidian_enabled}`);
-            if (item.x_elysium.obsidian_vault_name) {
-                lines.push(`${indent}  obsidian_vault_name: ${this.quote(item.x_elysium.obsidian_vault_name)}`);
-            }
-            if (item.x_elysium.obsidian_folder_path) {
-                lines.push(`${indent}  obsidian_folder_path: ${this.quote(item.x_elysium.obsidian_folder_path)}`);
-            }
-            if (item.x_elysium.obsidian_behavior) {
-                lines.push(`${indent}  obsidian_behavior: ${item.x_elysium.obsidian_behavior}`);
-            }
         }
 
         lines.push('');  // Empty line between items
+        return lines;
+    }
+
+    /**
+     * Serialize repeats/recurrence settings to YAML lines
+     */
+    private serializeRepeats(repeats: RepeatsSettings, indent: string): string[] {
+        const lines: string[] = [];
+        lines.push(`${indent}repeats:`);
+        lines.push(`${indent}  enabled: ${repeats.enabled}`);
+        if (repeats.count !== undefined) {
+            lines.push(`${indent}  count: ${repeats.count}`);
+        }
+        if (repeats.per) {
+            lines.push(`${indent}  per: ${repeats.per}`);
+        }
+        if (repeats.weekdays && repeats.weekdays.length > 0) {
+            lines.push(`${indent}  weekdays: [${repeats.weekdays.map(d => this.quote(d)).join(', ')}]`);
+        }
+        if (repeats.end_type) {
+            lines.push(`${indent}  end_type: ${repeats.end_type}`);
+        }
+        if (repeats.end_count !== undefined) {
+            lines.push(`${indent}  end_count: ${repeats.end_count}`);
+        }
+        if (repeats.end_date) {
+            lines.push(`${indent}  end_date: ${this.quote(repeats.end_date)}`);
+        }
         return lines;
     }
 
