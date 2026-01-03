@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-opentime-export",
 	"version": "1.0.0",
-	"description": "Export calendar-related content to Elysium's OpenTime (.ot) format",
+	"description": "Export calendar-related content to Elysium's OpenTime (.ot) format.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
