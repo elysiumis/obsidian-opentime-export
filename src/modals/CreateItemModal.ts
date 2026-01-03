@@ -137,7 +137,7 @@ export class CreateItemModal extends Modal {
         contentEl.addClass('opentime-create-modal');
 
         // Title
-        new Setting(contentEl).setName('Create item for Elysium').setHeading();
+        new Setting(contentEl).setName('Create new item').setHeading();
 
         // Build form
         this.buildForm();
@@ -763,7 +763,7 @@ export class CreateItemModal extends Modal {
             });
     }
 
-    private async handleSubmit() {
+    private handleSubmit(): void {
         // Validate
         if (!this.title.trim()) {
             new Notice('Please enter a title');
@@ -776,13 +776,13 @@ export class CreateItemModal extends Modal {
             return;
         }
 
-        // Export to Elysium folder
+        // Export to folder
         if (!this.settings.elysiumFolderPath) {
-            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            new Notice('Export folder not configured. Please set it in plugin settings.');
             return;
         }
 
-        const success = await this.elysiumExporter.exportItem(
+        const success = this.elysiumExporter.exportItem(
             item,
             this.settings.elysiumFolderPath,
             this.settings.defaultTimezone
@@ -793,7 +793,7 @@ export class CreateItemModal extends Modal {
 
         // Insert markdown if requested
         if (this.insertIntoNote && this.currentFile) {
-            await this.insertMarkdown(item);
+            this.insertMarkdown(item);
         }
 
         this.close();
@@ -840,8 +840,8 @@ export class CreateItemModal extends Modal {
         };
 
         switch (this.itemType) {
-            case 'goal':
-                return {
+            case 'goal': {
+                const goalItem: GoalItem = {
                     type: 'goal',
                     kind: 'goal',
                     target_date: this.targetDate || undefined,
@@ -849,10 +849,12 @@ export class CreateItemModal extends Modal {
                     estimate_minutes: this.estimateMinutes > 0 ? this.estimateMinutes : undefined,
                     repeats,
                     ...baseProps
-                } as GoalItem;
+                };
+                return goalItem;
+            }
 
-            case 'task':
-                return {
+            case 'task': {
+                const taskItem: TaskItem = {
                     type: 'task',
                     status: 'todo',
                     due: this.dueDate || undefined,
@@ -861,10 +863,12 @@ export class CreateItemModal extends Modal {
                     estimate_minutes: this.estimateMinutes > 0 ? this.estimateMinutes : undefined,
                     repeats,
                     ...baseProps
-                } as TaskItem;
+                };
+                return taskItem;
+            }
 
-            case 'habit':
-                return {
+            case 'habit': {
+                const habitItem: HabitItem = {
                     type: 'habit',
                     pattern: {
                         freq: this.habitFrequency
@@ -877,32 +881,38 @@ export class CreateItemModal extends Modal {
                     estimate_minutes: this.estimateMinutes > 0 ? this.estimateMinutes : undefined,
                     repeats,
                     ...baseProps
-                } as HabitItem;
+                };
+                return habitItem;
+            }
 
-            case 'reminder':
+            case 'reminder': {
                 if (!this.reminderDate || !this.reminderTime) {
                     new Notice('Please set reminder date and time');
                     return null;
                 }
-                return {
+                const reminderItem: ReminderItem = {
                     type: 'reminder',
                     time: `${this.reminderDate}T${this.reminderTime}:00`,
                     ...baseProps
-                } as ReminderItem;
+                };
+                return reminderItem;
+            }
 
-            case 'event':
+            case 'event': {
                 if (!this.startDate || !this.startTime) {
                     new Notice('Please set start date and time');
                     return null;
                 }
-                return {
+                const eventItem: EventItem = {
                     type: 'event',
                     start: `${this.startDate}T${this.startTime}:00`,
                     end: `${this.endDate || this.startDate}T${this.endTime || this.startTime}:00`,
                     timezone: this.settings.defaultTimezone,
                     location: this.location || undefined,
                     ...baseProps
-                } as EventItem;
+                };
+                return eventItem;
+            }
 
             case 'appointment': {
                 if (!this.startDate || !this.startTime) {
@@ -913,18 +923,19 @@ export class CreateItemModal extends Modal {
                     .split(',')
                     .map(a => a.trim())
                     .filter(a => a.length > 0);
-                return {
+                const appointmentItem: AppointmentItem = {
                     type: 'appointment',
                     start: `${this.startDate}T${this.startTime}:00`,
                     end: `${this.endDate || this.startDate}T${this.endTime || this.startTime}:00`,
                     attendees: attendeesList,
                     location: this.location || undefined,
                     ...baseProps
-                } as AppointmentItem;
+                };
+                return appointmentItem;
             }
 
-            case 'project':
-                return {
+            case 'project': {
+                const projectItem: ProjectItem = {
                     type: 'project',
                     kind: 'project',
                     target_date: this.targetDate || undefined,
@@ -932,14 +943,17 @@ export class CreateItemModal extends Modal {
                     children: [],
                     estimate_minutes: this.estimateMinutes > 0 ? this.estimateMinutes : undefined,
                     ...baseProps
-                } as ProjectItem;
+                };
+                return projectItem;
+            }
 
-            default:
+            default: {
                 return null;
+            }
         }
     }
 
-    private async insertMarkdown(item: OpenTimeItem) {
+    private insertMarkdown(item: OpenTimeItem): void {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!activeView || !activeView.editor) {
             return;
@@ -955,47 +969,42 @@ export class CreateItemModal extends Modal {
 
     private generateMarkdown(item: OpenTimeItem): string {
         switch (item.type) {
-            case 'goal':
-                const goal = item as GoalItem;
-                return `## Goal: ${goal.title}${goal.target_date ? ` (Target: ${goal.target_date})` : ''}`;
+            case 'goal': {
+                return `## Goal: ${item.title}${item.target_date ? ` (Target: ${item.target_date})` : ''}`;
+            }
 
-            case 'task':
-                const task = item as TaskItem;
-                let taskMd = `- [ ] ${task.title}`;
-                if (task.due) taskMd += ` 📅 ${task.due}`;
-                if (task.scheduled_start) taskMd += ` ⏳ ${task.scheduled_start.split('T')[0]}`;
+            case 'task': {
+                let taskMd = `- [ ] ${item.title}`;
+                if (item.due) taskMd += ` 📅 ${item.due}`;
+                if (item.scheduled_start) taskMd += ` ⏳ ${item.scheduled_start.split('T')[0]}`;
                 return taskMd;
+            }
 
-            case 'habit':
-                const habit = item as HabitItem;
-                return `- [ ] ${habit.title} 🔁 ${habit.pattern?.freq || 'daily'}`;
+            case 'habit': {
+                return `- [ ] ${item.title} 🔁 ${item.pattern?.freq || 'daily'}`;
+            }
 
-            case 'reminder':
-                const reminder = item as ReminderItem;
-                const reminderDateTime = reminder.time.replace('T', ' @ ').slice(0, -3);
-                return `- ⏰ ${reminder.title} @ ${reminderDateTime}`;
+            case 'reminder': {
+                const reminderDateTime = item.time.replace('T', ' @ ').slice(0, -3);
+                return `- ⏰ ${item.title} @ ${reminderDateTime}`;
+            }
 
-            case 'event':
-                const event = item as EventItem;
-                const startTime = event.start.split('T')[1]?.slice(0, 5) || '';
-                const endTime = event.end.split('T')[1]?.slice(0, 5) || '';
-                return `- ${startTime} - ${endTime} ${event.title}${event.location ? ` (${event.location})` : ''}`;
+            case 'event': {
+                const startTime = item.start.split('T')[1]?.slice(0, 5) || '';
+                const endTime = item.end.split('T')[1]?.slice(0, 5) || '';
+                return `- ${startTime} - ${endTime} ${item.title}${item.location ? ` (${item.location})` : ''}`;
+            }
 
-            case 'appointment':
-                const appt = item as AppointmentItem;
-                const apptStart = appt.start.split('T')[1]?.slice(0, 5) || '';
-                const apptEnd = appt.end.split('T')[1]?.slice(0, 5) || '';
-                const attendeesStr = appt.attendees.length > 0 ? ` 👥 ${appt.attendees.join(', ')}` : '';
-                return `- ${apptStart} - ${apptEnd} ${appt.title}${attendeesStr}`;
+            case 'appointment': {
+                const apptStart = item.start.split('T')[1]?.slice(0, 5) || '';
+                const apptEnd = item.end.split('T')[1]?.slice(0, 5) || '';
+                const attendeesStr = item.attendees.length > 0 ? ` 👥 ${item.attendees.join(', ')}` : '';
+                return `- ${apptStart} - ${apptEnd} ${item.title}${attendeesStr}`;
+            }
 
-            case 'project':
-                const project = item as ProjectItem;
-                return `## Project: ${project.title}${project.target_date ? ` (Target: ${project.target_date})` : ''}`;
-
-            default:
-                // Exhaustive check - all cases handled
-                const _exhaustiveCheck: never = item;
-                return `- ${(_exhaustiveCheck as OpenTimeItem).title}`;
+            case 'project': {
+                return `## Project: ${item.title}${item.target_date ? ` (Target: ${item.target_date})` : ''}`;
+            }
         }
     }
 

@@ -32,7 +32,7 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
         const adapter = this.app.vault.adapter;
         this.vaultPath = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : '';
 
-        this.setPlaceholder('Search for an Elysium item to link...');
+        this.setPlaceholder('Search for an item to link...');
         this.setInstructions([
             { command: '↑↓', purpose: 'To navigate' },
             { command: '↵', purpose: 'To select' },
@@ -45,7 +45,7 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
 
         // Load items from Elysium folder
         if (!this.settings.elysiumFolderPath) {
-            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            new Notice('Export folder not configured. Please set it in plugin settings.');
             this.close();
             return;
         }
@@ -53,7 +53,7 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
         this.items = this.itemReader.readAllItems(this.settings.elysiumFolderPath);
 
         if (this.items.length === 0) {
-            new Notice('No items found in Elysium folder');
+            new Notice('No items found in export folder');
             this.close();
             return;
         }

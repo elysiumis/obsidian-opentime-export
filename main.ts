@@ -49,14 +49,14 @@ export default class OpenTimeExportPlugin extends Plugin {
         }
 
         // Add ribbon icon
-        this.addRibbonIcon('calendar-clock', 'Export to Elysium', async () => {
+        this.addRibbonIcon('calendar-clock', 'Export to OpenTime', async () => {
             await this.exportAll();
         });
 
         // Add commands
         this.addCommand({
             id: 'export-all',
-            name: 'Export all to Elysium',
+            name: 'Export all items',
             callback: async () => {
                 await this.exportAll();
             }
@@ -64,7 +64,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'export-current-file',
-            name: 'Export current file to Elysium',
+            name: 'Export current file',
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
                 if (file) {
@@ -80,7 +80,7 @@ export default class OpenTimeExportPlugin extends Plugin {
         // Create item commands - one for each type
         this.addCommand({
             id: 'create-item',
-            name: 'Create item for Elysium',
+            name: 'Create new item',
             callback: () => {
                 this.openCreateModal(null);
             }
@@ -88,7 +88,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-goal',
-            name: 'Create goal for Elysium',
+            name: 'Create new goal',
             callback: () => {
                 this.openCreateModal('goal');
             }
@@ -96,7 +96,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-task',
-            name: 'Create task for Elysium',
+            name: 'Create new task',
             callback: () => {
                 this.openCreateModal('task');
             }
@@ -104,7 +104,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-habit',
-            name: 'Create habit for Elysium',
+            name: 'Create new habit',
             callback: () => {
                 this.openCreateModal('habit');
             }
@@ -112,7 +112,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-reminder',
-            name: 'Create reminder for Elysium',
+            name: 'Create new reminder',
             callback: () => {
                 this.openCreateModal('reminder');
             }
@@ -120,7 +120,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-event',
-            name: 'Create event for Elysium',
+            name: 'Create new event',
             callback: () => {
                 this.openCreateModal('event');
             }
@@ -128,7 +128,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-appointment',
-            name: 'Create appointment for Elysium',
+            name: 'Create new appointment',
             callback: () => {
                 this.openCreateModal('appointment');
             }
@@ -136,16 +136,16 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         this.addCommand({
             id: 'create-project',
-            name: 'Create project for Elysium',
+            name: 'Create new project',
             callback: () => {
                 this.openCreateModal('project');
             }
         });
 
-        // Link to existing Elysium item command
+        // Link to existing item command
         this.addCommand({
             id: 'link-to-elysium',
-            name: 'Link note to Elysium item',
+            name: 'Link to existing item',
             checkCallback: (checking: boolean) => {
                 const file = this.app.workspace.getActiveFile();
                 if (file) {
@@ -164,7 +164,7 @@ export default class OpenTimeExportPlugin extends Plugin {
                 if (file.extension === 'md') {
                     menu.addItem((item) => {
                         item
-                            .setTitle('Link to Elysium item')
+                            .setTitle('Link to existing item')
                             .setIcon('link')
                             .onClick(() => {
                                 this.openLinkModal();
@@ -179,7 +179,7 @@ export default class OpenTimeExportPlugin extends Plugin {
             this.app.workspace.on('editor-menu', (menu: Menu) => {
                 menu.addItem((item) => {
                     item
-                        .setTitle('Link to Elysium item')
+                        .setTitle('Link to existing item')
                         .setIcon('link')
                         .onClick(() => {
                             this.openLinkModal();
@@ -188,7 +188,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
                 menu.addItem((item) => {
                     item
-                        .setTitle('Create Elysium item')
+                        .setTitle('Create new item')
                         .setIcon('plus-circle')
                         .onClick(() => {
                             this.openCreateModal(null);
@@ -202,9 +202,9 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         // Auto-export on save if enabled
         this.registerEvent(
-            this.app.vault.on('modify', async (file) => {
+            this.app.vault.on('modify', (file) => {
                 if (this.settings.autoExport && file instanceof TFile && file.extension === 'md') {
-                    await this.exportAll();
+                    void this.exportAll();
                 }
             })
         );
@@ -259,7 +259,7 @@ export default class OpenTimeExportPlugin extends Plugin {
     async exportAll() {
         // Check if folder is configured
         if (!this.settings.elysiumFolderPath) {
-            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            new Notice('Export folder not configured. Please set it in plugin settings.');
             return;
         }
 
@@ -302,7 +302,7 @@ export default class OpenTimeExportPlugin extends Plugin {
     async exportFile(file: TFile) {
         // Check if folder is configured
         if (!this.settings.elysiumFolderPath) {
-            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            new Notice('Export folder not configured. Please set it in plugin settings.');
             return;
         }
 

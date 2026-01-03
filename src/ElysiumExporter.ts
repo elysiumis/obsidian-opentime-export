@@ -80,7 +80,7 @@ export class ElysiumExporter {
         timezone: string
     ): Promise<boolean> {
         if (!elysiumFolderPath) {
-            new Notice('Elysium folder not configured. Please set it in plugin settings.');
+            new Notice('Export folder not configured. Please set it in plugin settings.');
             return false;
         }
 
@@ -228,7 +228,7 @@ export class ElysiumExporter {
         try {
             // Validate folder path
             if (!elysiumFolderPath) {
-                new Notice('Elysium folder path not configured. Please set it in plugin settings.');
+                new Notice('Export folder not configured. Please set it in plugin settings.');
                 return false;
             }
 

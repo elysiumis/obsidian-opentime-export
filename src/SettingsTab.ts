@@ -60,26 +60,31 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    async display(): Promise<void> {
+    display(): void {
         const { containerEl } = this;
         containerEl.empty();
 
+        // Load Elysium preferences and build UI
+        void this.loadPreferencesAndBuildUI(containerEl);
+    }
+
+    private async loadPreferencesAndBuildUI(containerEl: HTMLElement): Promise<void> {
         // Load Elysium preferences
         this.elysiumInstalled = await isElysiumInstalled();
         this.elysiumPrefs = await readElysiumPreferences();
 
-        new Setting(containerEl).setName('OpenTime export settings').setHeading();
+        new Setting(containerEl).setName('OpenTime export').setHeading();
 
-        // Elysium Integration Section (Top priority)
-        new Setting(containerEl).setName('Elysium integration').setHeading();
+        // Integration Section (Top priority)
+        new Setting(containerEl).setName('Integration').setHeading();
 
         // Status indicator
         this.renderElysiumStatus(containerEl);
 
         // Folder picker
         const folderSetting = new Setting(containerEl)
-            .setName('Elysium OpenTime folder')
-            .setDesc('Folder where Elysium watches for .ot files');
+            .setName('Export folder')
+            .setDesc('Folder where .ot files are saved');
 
         folderSetting.addText(text => {
             text
@@ -311,7 +316,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                 (os?.homedir ? `${os.homedir()}/Documents` : '');
 
             const result = await dialog.showOpenDialog({
-                title: 'Select Elysium OpenTime folder',
+                title: 'Select export folder',
                 properties: ['openDirectory', 'createDirectory'],
                 defaultPath: defaultPath
             });
