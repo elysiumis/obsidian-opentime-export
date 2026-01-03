@@ -68,8 +68,8 @@ export async function readElysiumPreferences(): Promise<ElysiumPreferences> {
             // Key doesn't exist
         }
 
-    } catch (error) {
-        console.log('[OpenTime] Elysium preferences not found, using defaults');
+    } catch {
+        console.debug('[OpenTime] Elysium preferences not found, using defaults');
     }
 
     return prefs;

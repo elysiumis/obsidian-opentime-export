@@ -192,6 +192,6 @@ export function formatDate(date: Date): string {
 }
 
 // Helper to format as ISO8601 with timezone
-export function formatDateTime(date: Date, timezone?: string): string {
+export function formatDateTime(date: Date, _timezone?: string): string {
     return date.toISOString();
 }

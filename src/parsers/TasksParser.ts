@@ -32,9 +32,9 @@ const EMOJI_PATTERNS = {
     created: /➕\s*(\d{4}-\d{2}-\d{2})/,
     recurring: /🔁\s*([^\s]+)/,
     priority: {
-        high: /[⏫🔺]/,
-        medium: /[🔼]/,
-        low: /[🔽⏬]/
+        high: /[⏫🔺]/u,
+        medium: /[🔼]/u,
+        low: /[🔽⏬]/u
     }
 };
 
@@ -100,7 +100,7 @@ export class TasksParser {
         }
 
         // Clean up title - remove emojis and dates
-        let title = content
+        const title = content
             .replace(EMOJI_PATTERNS.due, '')
             .replace(EMOJI_PATTERNS.scheduled, '')
             .replace(EMOJI_PATTERNS.start, '')

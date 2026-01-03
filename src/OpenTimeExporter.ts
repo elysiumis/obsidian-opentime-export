@@ -238,7 +238,7 @@ export class OpenTimeExporter {
      */
     private quote(value: string): string {
         // Check if quoting is needed
-        const needsQuotes = /[:#\[\]{}|>&*?!,'"%@`]|^\s|\s$|^-\s|^$/;
+        const needsQuotes = /[:#[\]{}|>&*?!,'"%@`]|^\s|\s$|^-\s|^$/;
         if (needsQuotes.test(value) || value.includes('\n')) {
             // Escape internal quotes and wrap
             return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;

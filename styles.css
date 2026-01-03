@@ -1,4 +1,132 @@
 /* OpenTime Export Plugin Styles */
 
-/* Currently no custom styles needed */
-/* The plugin uses native Obsidian UI components */
+/* Settings input widths */
+.opentime-wide-input {
+    width: 300px;
+}
+
+/* Create modal styles */
+.opentime-create-modal .opentime-title-input {
+    width: 100%;
+}
+
+.opentime-create-modal .opentime-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Steps section */
+.opentime-steps-section {
+    margin-top: 16px;
+}
+
+.opentime-steps-list {
+    margin: 8px 0;
+}
+
+.opentime-step-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    margin: 4px 0;
+    background: var(--background-secondary);
+    border-radius: 4px;
+}
+
+.opentime-step-title {
+    flex: 1;
+}
+
+.opentime-step-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+/* Recurrence section */
+.opentime-recurrence-section {
+    margin-top: 16px;
+}
+
+.opentime-recurrence-options {
+    padding-left: 16px;
+}
+
+.opentime-recurrence-hidden {
+    display: none;
+}
+
+.opentime-weekday-section {
+    margin-top: 8px;
+}
+
+.opentime-weekday-hidden {
+    display: none;
+}
+
+.opentime-weekday-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.opentime-weekday-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    cursor: pointer;
+}
+
+.opentime-weekday-btn.active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.opentime-end-after,
+.opentime-end-date {
+    margin-top: 8px;
+}
+
+.opentime-end-hidden {
+    display: none;
+}
+
+.opentime-narrow-input {
+    width: 60px;
+}
+
+/* Link modal styles */
+.elysium-link-suggestion {
+    padding: 8px;
+}
+
+.elysium-type-badge {
+    font-size: 0.85em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--background-secondary);
+    margin-right: 8px;
+}
+
+.elysium-item-title {
+    font-weight: 500;
+}
+
+.elysium-item-id {
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+/* Status indicators */
+.opentime-status-ok {
+    color: var(--text-success);
+}
+
+.opentime-status-warning {
+    color: var(--text-warning);
+}

@@ -8,8 +8,23 @@
 import { Notice } from 'obsidian';
 import { OpenTimeDocument, OpenTimeItem } from './types/opentime';
 import { OpenTimeExporter } from './OpenTimeExporter';
-import { readElysiumPreferences, ExportMode } from './ElysiumPreferences';
+import { readElysiumPreferences } from './ElysiumPreferences';
 import * as yaml from 'js-yaml';
+
+// Node.js fs module types for Electron environment
+interface NodeFS {
+    existsSync(path: string): boolean;
+    mkdirSync(path: string, options?: { recursive?: boolean }): void;
+    readFileSync(path: string, encoding: string): string;
+    writeFileSync(path: string, data: string, encoding: string): void;
+    accessSync(path: string, mode: number): void;
+    constants: { W_OK: number };
+}
+
+function getFs(): NodeFS | null {
+     
+    return window.require?.('fs') as NodeFS | null;
+}
 
 export class ElysiumExporter {
     private exporter: OpenTimeExporter;
@@ -72,9 +87,9 @@ export class ElysiumExporter {
         const prefs = await readElysiumPreferences();
 
         if (prefs.exportMode === 'per-item') {
-            return this.exportPerItem(items, elysiumFolderPath, timezone);
+            return Promise.resolve(this.exportPerItem(items, elysiumFolderPath, timezone));
         } else {
-            return this.exportSingleFile(items, elysiumFolderPath, timezone, prefs.singleFilename);
+            return Promise.resolve(this.exportSingleFile(items, elysiumFolderPath, timezone, prefs.singleFilename));
         }
     }
 
@@ -82,13 +97,18 @@ export class ElysiumExporter {
      * Single File mode: Merge items into existing file by ID
      * Updates existing items, adds new ones
      */
-    private async exportSingleFile(
+    private exportSingleFile(
         items: OpenTimeItem[],
         elysiumFolderPath: string,
         timezone: string,
         filename: string
-    ): Promise<boolean> {
-        const fs = require('fs');
+    ): boolean {
+        const fs = getFs();
+        if (!fs) {
+            new Notice('File system not available');
+            return false;
+        }
+
         const normalizedPath = elysiumFolderPath.replace(/\/$/, '');
         const fullPath = `${normalizedPath}/${filename}.ot`;
 
@@ -141,9 +161,10 @@ export class ElysiumExporter {
             new Notice(`Exported ${items.length} items to ${filename}.ot`);
             return true;
 
-        } catch (error: any) {
+        } catch (error) {
             console.error('[OpenTime] Failed to export single file:', error);
-            new Notice(`Failed to export: ${error.message}`);
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            new Notice(`Failed to export: ${message}`);
             return false;
         }
     }
@@ -151,15 +172,15 @@ export class ElysiumExporter {
     /**
      * Per Item mode: Create individual files for each item
      */
-    private async exportPerItem(
+    private exportPerItem(
         items: OpenTimeItem[],
         elysiumFolderPath: string,
         timezone: string
-    ): Promise<boolean> {
+    ): boolean {
         let successCount = 0;
 
         for (const item of items) {
-            const success = await this.exportItem(item, elysiumFolderPath, timezone);
+            const success = this.exportItem(item, elysiumFolderPath, timezone);
             if (success) successCount++;
         }
 
@@ -179,11 +200,11 @@ export class ElysiumExporter {
      * Export a single item to Elysium's OpenTime folder
      * Creates an .ot file with Elysium-compatible naming
      */
-    async exportItem(
+    exportItem(
         item: OpenTimeItem,
         elysiumFolderPath: string,
         timezone: string
-    ): Promise<boolean> {
+    ): boolean {
         const document: OpenTimeDocument = {
             opentime_version: '0.2',
             default_timezone: timezone,
@@ -199,11 +220,11 @@ export class ElysiumExporter {
     /**
      * Export a full document to Elysium's OpenTime folder
      */
-    async exportDocument(
+    exportDocument(
         document: OpenTimeDocument,
         elysiumFolderPath: string,
         filename: string
-    ): Promise<boolean> {
+    ): boolean {
         try {
             // Validate folder path
             if (!elysiumFolderPath) {
@@ -219,7 +240,11 @@ export class ElysiumExporter {
             const yamlContent = this.exporter.export(document);
 
             // Use Node.js fs module via Electron
-            const fs = require('fs');
+            const fs = getFs();
+            if (!fs) {
+                new Notice('File system not available');
+                return false;
+            }
 
             // Ensure directory exists
             if (!fs.existsSync(normalizedPath)) {
@@ -230,9 +255,10 @@ export class ElysiumExporter {
             fs.writeFileSync(fullPath, yamlContent, 'utf8');
 
             return true;
-        } catch (error: any) {
+        } catch (error) {
             console.error('[OpenTime] Failed to export to Elysium folder:', error);
-            new Notice(`Failed to export to Elysium: ${error.message}`);
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            new Notice(`Failed to export to Elysium: ${message}`);
             return false;
         }
     }
@@ -242,7 +268,8 @@ export class ElysiumExporter {
      */
     checkFolderAccess(elysiumFolderPath: string): boolean {
         try {
-            const fs = require('fs');
+            const fs = getFs();
+            if (!fs) return false;
 
             if (!elysiumFolderPath) {
                 return false;

@@ -8,6 +8,28 @@
 import { OpenTimeDocument, OpenTimeItem } from './types/opentime';
 import * as yaml from 'js-yaml';
 
+// Node.js module types for Electron environment
+interface NodeFS {
+    existsSync(path: string): boolean;
+    readdirSync(path: string): string[];
+    readFileSync(path: string, encoding: string): string;
+    writeFileSync(path: string, data: string, encoding: string): void;
+}
+
+interface NodePath {
+    join(...paths: string[]): string;
+}
+
+function getFs(): NodeFS | null {
+     
+    return window.require?.('fs') as NodeFS | null;
+}
+
+function getPath(): NodePath | null {
+     
+    return window.require?.('path') as NodePath | null;
+}
+
 export interface ElysiumItemSummary {
     id: string;
     title: string;
@@ -21,13 +43,17 @@ export class ElysiumItemReader {
     /**
      * Read all items from .ot files in the Elysium folder
      */
-    async readAllItems(elysiumFolderPath: string): Promise<ElysiumItemSummary[]> {
+    readAllItems(elysiumFolderPath: string): ElysiumItemSummary[] {
         if (!elysiumFolderPath) {
             return [];
         }
 
-        const fs = require('fs');
-        const path = require('path');
+        const fs = getFs();
+        const pathModule = getPath();
+        if (!fs || !pathModule) {
+            return [];
+        }
+
         const items: ElysiumItemSummary[] = [];
 
         try {
@@ -35,16 +61,16 @@ export class ElysiumItemReader {
             const normalizedPath = elysiumFolderPath.replace(/\/$/, '');
 
             if (!fs.existsSync(normalizedPath)) {
-                console.log('[OpenTime] Elysium folder does not exist:', normalizedPath);
+                console.debug('[OpenTime] Elysium folder does not exist:', normalizedPath);
                 return [];
             }
 
             // Get all .ot files
-            const files = fs.readdirSync(normalizedPath) as string[];
+            const files = fs.readdirSync(normalizedPath);
             const otFiles = files.filter((f: string) => f.endsWith('.ot'));
 
             for (const filename of otFiles) {
-                const filepath = path.join(normalizedPath, filename);
+                const filepath = pathModule.join(normalizedPath, filename);
                 try {
                     const content = fs.readFileSync(filepath, 'utf8');
                     const doc = yaml.load(content) as OpenTimeDocument;
@@ -75,8 +101,9 @@ export class ElysiumItemReader {
     /**
      * Read a specific .ot file and return its document
      */
-    async readDocument(filepath: string): Promise<OpenTimeDocument | null> {
-        const fs = require('fs');
+    readDocument(filepath: string): OpenTimeDocument | null {
+        const fs = getFs();
+        if (!fs) return null;
 
         try {
             if (!fs.existsSync(filepath)) {
@@ -94,7 +121,7 @@ export class ElysiumItemReader {
     /**
      * Update an item in its .ot file to add Obsidian linking info
      */
-    async linkItemToObsidian(
+    linkItemToObsidian(
         filepath: string,
         itemId: string,
         obsidianInfo: {
@@ -103,8 +130,9 @@ export class ElysiumItemReader {
             vault_name: string;
             behavior: 'replace' | 'alongside';
         }
-    ): Promise<boolean> {
-        const fs = require('fs');
+    ): boolean {
+        const fs = getFs();
+        if (!fs) return false;
 
         try {
             // Read existing document
@@ -285,7 +313,7 @@ export class ElysiumItemReader {
     }
 
     private quote(value: string): string {
-        const needsQuotes = /[:#\[\]{}|>&*?!,'"%@`]|^\s|\s$|^-\s|^$/;
+        const needsQuotes = /[:#[\]{}|>&*?!,'"%@`]|^\s|\s$|^-\s|^$/;
         if (needsQuotes.test(value) || value.includes('\n')) {
             return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
         }

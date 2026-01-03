@@ -5,7 +5,7 @@
  * to link the current note to.
  */
 
-import { App, SuggestModal, Notice, TFile } from 'obsidian';
+import { App, SuggestModal, Notice, TFile, FileSystemAdapter } from 'obsidian';
 import { ElysiumItemReader, ElysiumItemSummary } from '../ElysiumItemReader';
 import { OpenTimeExportSettings } from '../SettingsTab';
 
@@ -29,17 +29,18 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
 
         // Get vault info
         this.vaultName = this.app.vault.getName();
-        this.vaultPath = (this.app.vault.adapter as any).basePath || '';
+        const adapter = this.app.vault.adapter;
+        this.vaultPath = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : '';
 
         this.setPlaceholder('Search for an Elysium item to link...');
         this.setInstructions([
-            { command: '↑↓', purpose: 'to navigate' },
-            { command: '↵', purpose: 'to select' },
-            { command: 'esc', purpose: 'to dismiss' }
+            { command: '↑↓', purpose: 'To navigate' },
+            { command: '↵', purpose: 'To select' },
+            { command: 'esc', purpose: 'To dismiss' }
         ]);
     }
 
-    async onOpen() {
+    onOpen(): void {
         super.onOpen();
 
         // Load items from Elysium folder
@@ -49,7 +50,7 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
             return;
         }
 
-        this.items = await this.itemReader.readAllItems(this.settings.elysiumFolderPath);
+        this.items = this.itemReader.readAllItems(this.settings.elysiumFolderPath);
 
         if (this.items.length === 0) {
             new Notice('No items found in Elysium folder');
@@ -86,14 +87,14 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
         id.setText(item.id);
     }
 
-    async onChooseSuggestion(item: ElysiumItemSummary) {
+    onChooseSuggestion(item: ElysiumItemSummary): void {
         if (!this.currentFile) {
             new Notice('No active file to link');
             return;
         }
 
         // Link the item to this Obsidian note
-        const success = await this.itemReader.linkItemToObsidian(
+        const success = this.itemReader.linkItemToObsidian(
             item.filepath,
             item.id,
             {

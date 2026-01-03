@@ -2,7 +2,8 @@
  * Settings Tab for OpenTime Export Plugin
  */
 
-import { App, PluginSettingTab, Setting, Notice, TextComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
+import type { TextComponent } from 'obsidian';
 import OpenTimeExportPlugin from '../main';
 import {
     readElysiumPreferences,
@@ -67,10 +68,10 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
         this.elysiumInstalled = await isElysiumInstalled();
         this.elysiumPrefs = await readElysiumPreferences();
 
-        containerEl.createEl('h2', { text: 'OpenTime Export Settings' });
+        new Setting(containerEl).setName('OpenTime export settings').setHeading();
 
         // Elysium Integration Section (Top priority)
-        containerEl.createEl('h3', { text: 'Elysium Integration' });
+        new Setting(containerEl).setName('Elysium integration').setHeading();
 
         // Status indicator
         this.renderElysiumStatus(containerEl);
@@ -84,7 +85,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
             text
                 .setPlaceholder('Click Browse to select folder')
                 .setValue(this.plugin.settings.elysiumFolderPath);
-            text.inputEl.style.width = '300px';
+            text.inputEl.addClass('opentime-wide-input');
             this.folderPathInput = text;
 
             // Allow manual editing as fallback
@@ -116,12 +117,12 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                     text
                         .setValue(getExportModeDescription(this.elysiumPrefs!))
                         .setDisabled(true);
-                    text.inputEl.style.width = '300px';
+                    text.inputEl.addClass('opentime-wide-input');
                 });
         }
 
         // Data Sources Section
-        containerEl.createEl('h3', { text: 'Data Sources' });
+        new Setting(containerEl).setName('Data sources').setHeading();
 
         new Setting(containerEl)
             .setName('Parse Tasks plugin format')
@@ -154,7 +155,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                 }));
 
         // Scope Section
-        containerEl.createEl('h3', { text: 'Scope' });
+        new Setting(containerEl).setName('Scope').setHeading();
 
         new Setting(containerEl)
             .setName('Include folders')
@@ -179,7 +180,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                 }));
 
         // Behavior Section
-        containerEl.createEl('h3', { text: 'Behavior' });
+        new Setting(containerEl).setName('Behavior').setHeading();
 
         new Setting(containerEl)
             .setName('Default timezone')
@@ -225,7 +226,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                 }));
 
         // Advanced Section
-        containerEl.createEl('h3', { text: 'Advanced' });
+        new Setting(containerEl).setName('Advanced').setHeading();
 
         new Setting(containerEl)
             .setName('ID prefix')
@@ -264,28 +265,37 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
      * Open native folder picker dialog
      */
     private async selectFolder(): Promise<string | null> {
+        interface DialogResult {
+            canceled: boolean;
+            filePaths: string[];
+        }
+
+        interface ElectronDialog {
+            showOpenDialog(options: {
+                title?: string;
+                properties?: string[];
+                defaultPath?: string;
+            }): Promise<DialogResult>;
+        }
+
         try {
             // Access Electron's dialog through various possible paths
-            let dialog: any = null;
+            let dialog: ElectronDialog | null = null;
 
             // Try different ways to access Electron dialog
-            try {
-                // Method 1: @electron/remote (modern Electron)
-                const remote = require('@electron/remote');
-                dialog = remote.dialog;
-            } catch {
-                try {
-                    // Method 2: electron.remote (older Electron)
-                    const electron = require('electron');
-                    dialog = electron.remote?.dialog;
-                } catch {
-                    // Method 3: Direct electron access
-                    try {
-                        const electron = require('electron');
-                        dialog = electron.dialog;
-                    } catch {
-                        // No dialog available
-                    }
+             
+            const electronRemote = window.require?.('@electron/remote');
+            if (electronRemote?.dialog) {
+                dialog = electronRemote.dialog as ElectronDialog;
+            }
+
+            if (!dialog) {
+                 
+                const electron = window.require?.('electron');
+                if (electron?.remote?.dialog) {
+                    dialog = electron.remote.dialog as ElectronDialog;
+                } else if (electron?.dialog) {
+                    dialog = electron.dialog as ElectronDialog;
                 }
             }
 
@@ -295,12 +305,13 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                 return null;
             }
 
-            const os = require('os');
+             
+            const os = window.require?.('os');
             const defaultPath = this.plugin.settings.elysiumFolderPath ||
-                `${os.homedir()}/Documents`;
+                (os?.homedir ? `${os.homedir()}/Documents` : '');
 
             const result = await dialog.showOpenDialog({
-                title: 'Select Elysium OpenTime Folder',
+                title: 'Select Elysium OpenTime folder',
                 properties: ['openDirectory', 'createDirectory'],
                 defaultPath: defaultPath
             });

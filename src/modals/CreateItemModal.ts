@@ -10,11 +10,8 @@ import {
     Modal,
     Setting,
     TFile,
-    Editor,
     MarkdownView,
-    Notice,
-    DropdownComponent,
-    TextComponent
+    Notice
 } from 'obsidian';
 import {
     OpenTimeItemType,
@@ -140,7 +137,7 @@ export class CreateItemModal extends Modal {
         contentEl.addClass('opentime-create-modal');
 
         // Title
-        contentEl.createEl('h2', { text: 'Create Item for Elysium' });
+        new Setting(contentEl).setName('Create item for Elysium').setHeading();
 
         // Build form
         this.buildForm();
@@ -583,7 +580,7 @@ export class CreateItemModal extends Modal {
 
     private buildStepsSection(container: HTMLElement) {
         const stepsContainer = container.createDiv({ cls: 'opentime-steps-section' });
-        stepsContainer.createEl('h4', { text: 'Steps (Checklist)' });
+        new Setting(stepsContainer).setName('Steps (checklist)').setHeading();
 
         // Show existing steps
         const stepsList = stepsContainer.createDiv({ cls: 'opentime-steps-list' });
@@ -648,14 +645,14 @@ export class CreateItemModal extends Modal {
                         // Show/hide recurrence options
                         const options = recurrenceContainer.querySelector('.opentime-recurrence-options') as HTMLElement;
                         if (options) {
-                            options.style.display = value ? 'block' : 'none';
+                            options.toggleClass('opentime-recurrence-hidden', !value);
                         }
                     });
             });
 
         // Recurrence options (hidden by default)
-        const optionsContainer = recurrenceContainer.createDiv({ cls: 'opentime-recurrence-options' });
-        optionsContainer.style.display = this.repeatsEnabled ? 'block' : 'none';
+        const optionsContainerCls = this.repeatsEnabled ? 'opentime-recurrence-options' : 'opentime-recurrence-options opentime-recurrence-hidden';
+        const optionsContainer = recurrenceContainer.createDiv({ cls: optionsContainerCls });
 
         // Count and Period
         new Setting(optionsContainer)
@@ -670,7 +667,7 @@ export class CreateItemModal extends Modal {
                     });
                 text.inputEl.type = 'number';
                 text.inputEl.min = '1';
-                text.inputEl.style.width = '60px';
+                text.inputEl.addClass('opentime-narrow-input');
             })
             .addDropdown(dropdown => {
                 dropdown
@@ -682,16 +679,16 @@ export class CreateItemModal extends Modal {
                     .onChange((value: RepeatsPer) => {
                         this.repeatsPer = value;
                         // Show/hide weekday selector
-                        const weekdaySection = optionsContainer.querySelector('.opentime-weekday-section') as HTMLElement;
-                        if (weekdaySection) {
-                            weekdaySection.style.display = value === 'Week' ? 'block' : 'none';
+                        const weekdaySec = optionsContainer.querySelector('.opentime-weekday-section') as HTMLElement;
+                        if (weekdaySec) {
+                            weekdaySec.toggleClass('opentime-weekday-hidden', value !== 'Week');
                         }
                     });
             });
 
         // Weekday selector (for weekly)
-        const weekdaySection = optionsContainer.createDiv({ cls: 'opentime-weekday-section' });
-        weekdaySection.style.display = this.repeatsPer === 'Week' ? 'block' : 'none';
+        const weekdayCls = this.repeatsPer === 'Week' ? 'opentime-weekday-section' : 'opentime-weekday-section opentime-weekday-hidden';
+        const weekdaySection = optionsContainer.createDiv({ cls: weekdayCls });
 
         new Setting(weekdaySection)
             .setName('On days')
@@ -728,16 +725,16 @@ export class CreateItemModal extends Modal {
                     .onChange((value: RepeatsEndType) => {
                         this.repeatsEndType = value;
                         // Show/hide end options
-                        const afterSection = optionsContainer.querySelector('.opentime-end-after') as HTMLElement;
-                        const dateSection = optionsContainer.querySelector('.opentime-end-date') as HTMLElement;
-                        if (afterSection) afterSection.style.display = value === 'After' ? 'block' : 'none';
-                        if (dateSection) dateSection.style.display = value === 'On Date' ? 'block' : 'none';
+                        const afterSec = optionsContainer.querySelector('.opentime-end-after') as HTMLElement;
+                        const dateSec = optionsContainer.querySelector('.opentime-end-date') as HTMLElement;
+                        if (afterSec) afterSec.toggleClass('opentime-end-hidden', value !== 'After');
+                        if (dateSec) dateSec.toggleClass('opentime-end-hidden', value !== 'On Date');
                     });
             });
 
         // After X occurrences
-        const afterSection = optionsContainer.createDiv({ cls: 'opentime-end-after' });
-        afterSection.style.display = this.repeatsEndType === 'After' ? 'block' : 'none';
+        const afterCls = this.repeatsEndType === 'After' ? 'opentime-end-after' : 'opentime-end-after opentime-end-hidden';
+        const afterSection = optionsContainer.createDiv({ cls: afterCls });
         new Setting(afterSection)
             .setName('Occurrences')
             .addText(text => {
@@ -752,8 +749,8 @@ export class CreateItemModal extends Modal {
             });
 
         // On specific date
-        const dateSection = optionsContainer.createDiv({ cls: 'opentime-end-date' });
-        dateSection.style.display = this.repeatsEndType === 'On Date' ? 'block' : 'none';
+        const dateCls = this.repeatsEndType === 'On Date' ? 'opentime-end-date' : 'opentime-end-date opentime-end-hidden';
+        const dateSection = optionsContainer.createDiv({ cls: dateCls });
         new Setting(dateSection)
             .setName('End date')
             .addText(text => {
@@ -907,7 +904,7 @@ export class CreateItemModal extends Modal {
                     ...baseProps
                 } as EventItem;
 
-            case 'appointment':
+            case 'appointment': {
                 if (!this.startDate || !this.startTime) {
                     new Notice('Please set start date and time');
                     return null;
@@ -924,6 +921,7 @@ export class CreateItemModal extends Modal {
                     location: this.location || undefined,
                     ...baseProps
                 } as AppointmentItem;
+            }
 
             case 'project':
                 return {

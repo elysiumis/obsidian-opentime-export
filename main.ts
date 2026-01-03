@@ -6,7 +6,6 @@
  */
 
 import {
-    App,
     Plugin,
     TFile,
     Notice,
@@ -46,7 +45,7 @@ export default class OpenTimeExportPlugin extends Plugin {
         // Check if Elysium is installed
         const elysiumInstalled = await isElysiumInstalled();
         if (!elysiumInstalled) {
-            console.log('[OpenTime] Elysium not detected - using default settings');
+            console.debug('[OpenTime] Elysium not detected - using default settings');
         }
 
         // Add ribbon icon
@@ -70,7 +69,7 @@ export default class OpenTimeExportPlugin extends Plugin {
                 const file = this.app.workspace.getActiveFile();
                 if (file) {
                     if (!checking) {
-                        this.exportFile(file);
+                        void this.exportFile(file);
                     }
                     return true;
                 }
@@ -210,11 +209,11 @@ export default class OpenTimeExportPlugin extends Plugin {
             })
         );
 
-        console.log('[OpenTime] Export plugin loaded');
+        console.debug('[OpenTime] Export plugin loaded');
     }
 
     onunload() {
-        console.log('[OpenTime] Export plugin unloaded');
+        console.debug('[OpenTime] Export plugin unloaded');
     }
 
     async loadSettings() {
@@ -293,7 +292,7 @@ export default class OpenTimeExportPlugin extends Plugin {
 
         if (success) {
             const elapsed = Date.now() - startTime;
-            console.log(`[OpenTime] Exported ${items.length} items in ${elapsed}ms`);
+            console.debug(`[OpenTime] Exported ${items.length} items in ${elapsed}ms`);
         }
     }
 
