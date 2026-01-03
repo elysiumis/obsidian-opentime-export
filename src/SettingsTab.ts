@@ -88,7 +88,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
 
         folderSetting.addText(text => {
             text
-                .setPlaceholder('Click Browse to select folder')
+                .setPlaceholder('Click browse to select folder')
                 .setValue(this.plugin.settings.elysiumFolderPath);
             text.inputEl.addClass('opentime-wide-input');
             this.folderPathInput = text;
@@ -103,13 +103,15 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
         folderSetting.addButton(button => {
             button
                 .setButtonText('Browse...')
-                .onClick(async () => {
-                    const folder = await this.selectFolder();
-                    if (folder) {
-                        this.plugin.settings.elysiumFolderPath = folder;
-                        this.folderPathInput?.setValue(folder);
-                        await this.plugin.saveSettings();
-                    }
+                .onClick(() => {
+                    void (async () => {
+                        const folder = await this.selectFolder();
+                        if (folder) {
+                            this.plugin.settings.elysiumFolderPath = folder;
+                            this.folderPathInput?.setValue(folder);
+                            await this.plugin.saveSettings();
+                        }
+                    })();
                 });
         });
 
@@ -117,7 +119,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
         if (this.elysiumPrefs) {
             new Setting(containerEl)
                 .setName('Export mode')
-                .setDesc('Synced from Elysium preferences')
+                .setDesc('Synced from app preferences')
                 .addText(text => {
                     text
                         .setValue(getExportModeDescription(this.elysiumPrefs!))
@@ -130,7 +132,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
         new Setting(containerEl).setName('Data sources').setHeading();
 
         new Setting(containerEl)
-            .setName('Parse Tasks plugin format')
+            .setName('Parse tasks plugin format')
             .setDesc('Extract tasks with emoji dates (📅 due, ⏳ scheduled, 🛫 start, ✅ done)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableTasksParser)
@@ -140,8 +142,8 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Parse Day Planner format')
-            .setDesc('Extract time blocks (e.g., "09:00 - 10:00 Meeting")')
+            .setName('Parse day planner format')
+            .setDesc('Extract time blocks (e.g., "09:00 - 10:00 meeting")')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableDayPlannerParser)
                 .onChange(async (value) => {
@@ -260,7 +262,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
             });
         } else {
             descEl.createSpan({
-                text: '⚠ Elysium not detected - using default settings (Single File mode)',
+                text: '⚠ Elysium not detected - using default settings (single file mode)',
                 cls: 'opentime-status-warning'
             });
         }

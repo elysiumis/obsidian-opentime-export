@@ -185,7 +185,7 @@ export class ElysiumExporter {
         }
 
         if (successCount === items.length) {
-            new Notice(`Exported ${successCount} items to Elysium`);
+            new Notice(`Exported ${successCount} items`);
             return true;
         } else if (successCount > 0) {
             new Notice(`Exported ${successCount}/${items.length} items (some failed)`);
@@ -258,7 +258,7 @@ export class ElysiumExporter {
         } catch (error) {
             console.error('[OpenTime] Failed to export to Elysium folder:', error);
             const message = error instanceof Error ? error.message : 'Unknown error';
-            new Notice(`Failed to export to Elysium: ${message}`);
+            new Notice(`Failed to export: ${message}`);
             return false;
         }
     }

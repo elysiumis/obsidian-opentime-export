@@ -161,13 +161,13 @@ export class CreateItemModal extends Modal {
                 .setDesc('What kind of item are you creating?')
                 .addDropdown(dropdown => {
                     dropdown
-                        .addOption('goal', 'Goal')
-                        .addOption('task', 'Task')
-                        .addOption('habit', 'Habit')
-                        .addOption('reminder', 'Reminder')
-                        .addOption('event', 'Event')
-                        .addOption('appointment', 'Appointment')
-                        .addOption('project', 'Project')
+                        .addOption('goal', 'goal')
+                        .addOption('task', 'task')
+                        .addOption('habit', 'habit')
+                        .addOption('reminder', 'reminder')
+                        .addOption('event', 'event')
+                        .addOption('appointment', 'appointment')
+                        .addOption('project', 'project')
                         .setValue(this.itemType)
                         .onChange((value: OpenTimeItemType) => {
                             this.itemType = value;
@@ -343,9 +343,9 @@ export class CreateItemModal extends Modal {
             .setDesc('How often should this habit occur?')
             .addDropdown(dropdown => {
                 dropdown
-                    .addOption('daily', 'Daily')
-                    .addOption('weekly', 'Weekly')
-                    .addOption('custom', 'Custom days')
+                    .addOption('daily', 'daily')
+                    .addOption('weekly', 'weekly')
+                    .addOption('custom', 'custom days')
                     .setValue(this.habitFrequency)
                     .onChange((value: HabitFrequency) => {
                         this.habitFrequency = value;
@@ -489,7 +489,7 @@ export class CreateItemModal extends Modal {
             .setDesc('Comma-separated list of attendees')
             .addText(text => {
                 text
-                    .setPlaceholder('John, Jane, Bob')
+                    .setPlaceholder('alice, bob, carol')
                     .setValue(this.attendees)
                     .onChange(value => {
                         this.attendees = value;
@@ -533,7 +533,7 @@ export class CreateItemModal extends Modal {
             .setDesc('Comma-separated categories (labels)')
             .addText(text => {
                 text
-                    .setPlaceholder('Personal, Health, Work')
+                    .setPlaceholder('personal, health, work')
                     .setValue(this.categories)
                     .onChange(value => {
                         this.categories = value;
@@ -671,10 +671,10 @@ export class CreateItemModal extends Modal {
             })
             .addDropdown(dropdown => {
                 dropdown
-                    .addOption('Day', 'Day(s)')
-                    .addOption('Week', 'Week(s)')
-                    .addOption('Month', 'Month(s)')
-                    .addOption('Year', 'Year(s)')
+                    .addOption('Day', 'day(s)')
+                    .addOption('Week', 'week(s)')
+                    .addOption('Month', 'month(s)')
+                    .addOption('Year', 'year(s)')
                     .setValue(this.repeatsPer)
                     .onChange((value: RepeatsPer) => {
                         this.repeatsPer = value;
@@ -695,7 +695,7 @@ export class CreateItemModal extends Modal {
             .setDesc('Select days of the week');
 
         const weekdayButtons = weekdaySection.createDiv({ cls: 'opentime-weekday-buttons' });
-        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const weekdays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         weekdays.forEach(day => {
             const btn = weekdayButtons.createEl('button', {
                 text: day,
@@ -718,9 +718,9 @@ export class CreateItemModal extends Modal {
             .setName('Ends')
             .addDropdown(dropdown => {
                 dropdown
-                    .addOption('Never', 'Never')
-                    .addOption('After', 'After X occurrences')
-                    .addOption('On Date', 'On specific date')
+                    .addOption('Never', 'never')
+                    .addOption('After', 'after X occurrences')
+                    .addOption('On Date', 'on specific date')
                     .setValue(this.repeatsEndType)
                     .onChange((value: RepeatsEndType) => {
                         this.repeatsEndType = value;

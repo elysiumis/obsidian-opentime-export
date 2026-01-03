@@ -92,7 +92,7 @@ export async function isElysiumInstalled(): Promise<boolean> {
  */
 export function getExportModeDescription(prefs: ElysiumPreferences): string {
     if (prefs.exportMode === 'per-item') {
-        return 'Per Item (elysium-{type}-{title}.ot)';
+        return 'per item (elysium-{type}-{title}.ot)';
     }
-    return `Single File (${prefs.singleFilename}.ot)`;
+    return `single file (${prefs.singleFilename}.ot)`;
 }

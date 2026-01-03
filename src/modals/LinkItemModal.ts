@@ -34,9 +34,9 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
 
         this.setPlaceholder('Search for an item to link...');
         this.setInstructions([
-            { command: '↑↓', purpose: 'To navigate' },
-            { command: '↵', purpose: 'To select' },
-            { command: 'esc', purpose: 'To dismiss' }
+            { command: '↑↓', purpose: 'to navigate' },
+            { command: '↵', purpose: 'to select' },
+            { command: 'esc', purpose: 'to dismiss' }
         ]);
     }
 
