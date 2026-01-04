@@ -41,7 +41,7 @@ export class LinkItemModal extends SuggestModal<ElysiumItemSummary> {
     }
 
     onOpen(): void {
-        super.onOpen();
+        void super.onOpen();
 
         // Load items from Elysium folder
         if (!this.settings.elysiumFolderPath) {

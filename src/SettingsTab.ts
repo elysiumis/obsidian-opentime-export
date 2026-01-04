@@ -73,7 +73,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
         this.elysiumInstalled = await isElysiumInstalled();
         this.elysiumPrefs = await readElysiumPreferences();
 
-        new Setting(containerEl).setName('OpenTime export').setHeading();
+        new Setting(containerEl).setName('Opentime export').setHeading();
 
         // Integration Section (Top priority)
         new Setting(containerEl).setName('Integration').setHeading();
@@ -102,7 +102,7 @@ export class OpenTimeExportSettingTab extends PluginSettingTab {
 
         folderSetting.addButton(button => {
             button
-                .setButtonText('Browse...')
+                .setButtonText('browse...')
                 .onClick(() => {
                     void (async () => {
                         const folder = await this.selectFolder();

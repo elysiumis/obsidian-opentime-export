@@ -181,8 +181,8 @@ export class ElysiumItemReader {
     private serializeDocument(doc: OpenTimeDocument): string {
         const lines: string[] = [];
 
-        lines.push('# OpenTime File');
-        lines.push('# Modified by Obsidian OpenTime Export Plugin');
+        lines.push('# opentime file');
+        lines.push('# modified by obsidian opentime export plugin');
         lines.push('');
         lines.push(`opentime_version: "${doc.opentime_version || '0.2'}"`);
         if (doc.default_timezone) {

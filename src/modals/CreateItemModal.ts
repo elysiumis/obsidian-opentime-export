@@ -177,7 +177,7 @@ export class CreateItemModal extends Modal {
         } else {
             // Show type as read-only
             formContainer.createEl('p', {
-                text: `Creating: ${this.initialType.charAt(0).toUpperCase() + this.initialType.slice(1)}`,
+                text: `Creating: ${this.initialType}`,
                 cls: 'opentime-type-label'
             });
         }
@@ -217,11 +217,11 @@ export class CreateItemModal extends Modal {
         // Buttons
         const buttonContainer = formContainer.createDiv({ cls: 'opentime-buttons' });
 
-        const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+        const cancelBtn = buttonContainer.createEl('button', { text: 'cancel' });
         cancelBtn.addEventListener('click', () => this.close());
 
         const createBtn = buttonContainer.createEl('button', {
-            text: 'Create',
+            text: 'create',
             cls: 'mod-cta'
         });
         createBtn.addEventListener('click', () => this.handleSubmit());
@@ -970,7 +970,7 @@ export class CreateItemModal extends Modal {
     private generateMarkdown(item: OpenTimeItem): string {
         switch (item.type) {
             case 'goal': {
-                return `## Goal: ${item.title}${item.target_date ? ` (Target: ${item.target_date})` : ''}`;
+                return `## goal: ${item.title}${item.target_date ? ` (target: ${item.target_date})` : ''}`;
             }
 
             case 'task': {
@@ -1003,7 +1003,7 @@ export class CreateItemModal extends Modal {
             }
 
             case 'project': {
-                return `## Project: ${item.title}${item.target_date ? ` (Target: ${item.target_date})` : ''}`;
+                return `## project: ${item.title}${item.target_date ? ` (target: ${item.target_date})` : ''}`;
             }
         }
     }

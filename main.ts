@@ -49,7 +49,7 @@ export default class OpenTimeExportPlugin extends Plugin {
         }
 
         // Add ribbon icon
-        this.addRibbonIcon('calendar-clock', 'Export to OpenTime', async () => {
+        this.addRibbonIcon('calendar-clock', 'Export to opentime', async () => {
             await this.exportAll();
         });
 
